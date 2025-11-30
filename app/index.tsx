@@ -14,31 +14,7 @@ import { Swipeable } from "react-native-gesture-handler";
 import { Product } from "../types";
 import { useFavorites } from "../context/FavoritesContext";
 import { router } from "expo-router";
-
-// ---------- helpers ----------
-const isPrime = (n: number): boolean => {
-  if (n < 2) return false;
-  if (n === 2) return true;
-  if (n % 2 === 0) return false;
-
-  const limit = Math.floor(Math.sqrt(n));
-  for (let i = 3; i <= limit; i += 2) {
-    if (n % i === 0) return false;
-  }
-  return true;
-};
-
-const countVowels = (text: string): number =>
-  (text.toLowerCase().match(/[aeiou]/g) || []).length;
-
-const calculatePrice = (title: string, description: string): number => {
-  const titleLength = title.length;
-  const vowelsInDescription = countVowels(description);
-  return titleLength * 10 + vowelsInDescription;
-};
-
-const formatCurrency = (amount: number): string =>
-  `$${amount.toFixed(2)}`;
+import { isPrime, calculatePrice, formatCurrency } from "../utils/mathUtils";
 
 // ---------- row component with swipe + fade ----------
 type ProductRowProps = {
@@ -84,7 +60,7 @@ const ProductRow = ({
     toggleFavorite(item);
   };
 
-  const prime = isPrime(index);
+  const prime = isPrime(index+1);
   const priceNumber = calculatePrice(item.title, item.description);
   const formattedPrice = formatCurrency(priceNumber);
 
