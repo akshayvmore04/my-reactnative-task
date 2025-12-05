@@ -15,6 +15,7 @@ import { Product } from "../types";
 import { useFavorites } from "../context/FavoritesContext";
 import { router } from "expo-router";
 import { isPrime, calculatePrice, formatCurrency } from "../utils/mathUtils";
+import { sortProductsByPrice } from "../utils/sortingUtils";
 
 // ---------- row component with swipe + fade ----------
 type ProductRowProps = {
@@ -44,6 +45,7 @@ const ProductRow = ({
       onDelete(item.id);
     });
   };
+
   const handleHeartPress = () => {
     Animated.sequence([
       Animated.spring(scale, {
@@ -60,7 +62,8 @@ const ProductRow = ({
     toggleFavorite(item);
   };
 
-  const prime = isPrime(index+1);
+  // use 1-based index for prime logic
+  const prime = isPrime(index + 1);
   const priceNumber = calculatePrice(item.title, item.description);
   const formattedPrice = formatCurrency(priceNumber);
 
@@ -75,59 +78,55 @@ const ProductRow = ({
       renderRightActions={renderRightActions}
       onSwipeableOpen={handleDelete}
     >
-     <TouchableOpacity
-  activeOpacity={0.8}
-  onPress={() =>
-    // Navigate to detail screen with item data
-    // (you’ll import router at the top)
-    router.push({
-      pathname: "/detail",
-      params: {
-        title: item.title,
-        description: item.description,
-        image: item.image,
-      },
-    })
-  }
->
-  <Animated.View
-    style={[styles.card, prime && styles.primeCard, { opacity }]}
-  >
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() =>
+          router.push({
+            pathname: "/detail",
+            params: {
+              title: item.title,
+              description: item.description,
+              image: item.image,
+            },
+          })
+        }
+      >
+        <Animated.View
+          style={[styles.card, prime && styles.primeCard, { opacity }]}
+        >
+          <Image source={{ uri: item.image }} style={styles.image} />
+          {prime && <Text style={styles.primeBadge}>👑 Prime Index</Text>}
 
-        <Image source={{ uri: item.image }} style={styles.image} />
-        {prime && <Text style={styles.primeBadge}>👑 Prime Index</Text>}
+          <View style={styles.cardContent}>
+            <Text style={styles.title} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.description} numberOfLines={2}>
+              {item.description}
+            </Text>
 
-        <View style={styles.cardContent}>
-          <Text style={styles.title} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.description} numberOfLines={2}>
-            {item.description}
-          </Text>
+            <View style={styles.cardFooter}>
+              <Text style={styles.price}>{formattedPrice}</Text>
 
-          <View className="cardFooter" style={styles.cardFooter}>
-            <Text style={styles.price}>{formattedPrice}</Text>
-
-           <Animated.View style={{ transform: [{ scale }] }}>
-  <TouchableOpacity
-    style={styles.heartButton}
-    onPress={handleHeartPress}
-  >
-    <Text
-      style={[
-        styles.heartText,
-        isFavorite(item.id) && styles.heartActive,
-      ]}
-    >
-      {isFavorite(item.id) ? "♥" : "♡"}
-    </Text>
-  </TouchableOpacity>
-</Animated.View>
-
+              <Animated.View style={{ transform: [{ scale }] }}>
+                <TouchableOpacity
+                  style={styles.heartButton}
+                  onPress={handleHeartPress}
+                >
+                  <Text
+                    style={[
+                      styles.heartText,
+                      isFavorite(item.id) && styles.heartActive,
+                    ]}
+                  >
+                    {isFavorite(item.id) ? "♥" : "♡"}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
           </View>
-        </View>
-      </Animated.View>
-</TouchableOpacity>
+        </Animated.View>
+      </TouchableOpacity>
     </Swipeable>
   );
 };
@@ -137,6 +136,7 @@ export default function Index() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -174,6 +174,12 @@ export default function Index() {
     setProducts((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const handleSortToggle = () => {
+    const newOrder = sortOrder === "asc" ? "desc" : "asc";
+    setSortOrder(newOrder);
+    setProducts((prev) => sortProductsByPrice(prev, newOrder));
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -201,6 +207,20 @@ export default function Index() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <Text style={styles.screenTitle}>Feed</Text>
+
+      {/* sort button */}
+      <View style={styles.sortContainer}>
+        <TouchableOpacity
+          onPress={handleSortToggle}
+          style={styles.sortButton}
+        >
+          <Text style={styles.sortButtonText}>
+            Sort by Price (
+            {sortOrder === "asc" ? "↑ Ascending" : "↓ Descending"})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={products}
         keyExtractor={(item) => item.id.toString()}
@@ -238,6 +258,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 16,
     color: "#ffffff",
+  },
+  sortContainer: {
+    alignItems: "flex-end",
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  sortButton: {
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  sortButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 13,
   },
   card: {
     flexDirection: "row",
